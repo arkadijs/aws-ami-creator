@@ -68,7 +68,7 @@ instance=$(meta instance-id)
 
 workdir=$(mktemp -d)
 cd $workdir
-curl -O $s3base/$light $s3base/$full
+curl -O $s3base/$light -O $s3base/$full
 #ln -s ~/$full
 
 mkdir light
