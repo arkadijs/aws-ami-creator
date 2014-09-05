@@ -62,7 +62,7 @@ wait_snapshot() {
 }
 
 my_zone=$(meta placement/availability-zone)
-my_region=${my_zone:0:-1}
+my_region=${my_zone/%?}
 export AWS_DEFAULT_REGION=$my_region
 instance=$(meta instance-id)
 
