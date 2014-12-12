@@ -36,7 +36,7 @@ wait_volume() {
     local volume=$1
     set +x
     echo -n waiting for volume $volume
-    while state=$(aws ec2 describe-volumes --volume-ids $volume | jq -r .Volumes[0].State); test "$state" = "creating"; do
+    while state=$(aws --output json ec2 describe-volumes --volume-ids $volume | jq -r .Volumes[0].State); test "$state" = "creating"; do
         sleep 5; echo -n '.'; done;
     echo " => $state"
     set -x
@@ -56,7 +56,7 @@ wait_snapshot() {
     local region=$2
     set +x
     echo -n waiting for snapshot $snap in $region
-    while state=$(aws ec2 describe-snapshots --snapshot-ids $snap --region $region | jq -r .Snapshots[0].State); test "$state" = "pending"; do
+    while state=$(aws --output json ec2 describe-snapshots --snapshot-ids $snap --region $region | jq -r .Snapshots[0].State); test "$state" = "pending"; do
         sleep 10; echo -n '.'; done;
     echo " => $state"
     set -x
@@ -75,24 +75,24 @@ curl -O $s3base/$light -O $s3base/$full
 mkdir light
 tar xzf $light -C light
 
-volume=$(aws ec2 create-volume --size 2 --volume-type $volume_type --availability-zone $my_zone | jq -r .VolumeId)
+volume=$(aws --output json ec2 create-volume --size 2 --volume-type $volume_type --availability-zone $my_zone | jq -r .VolumeId)
 wait_volume $volume
 aws ec2 attach-volume --volume-id $volume --instance-id $instance --device $dev
 wait_disk $dev
 tar xzf $full -O image | tar xzf - -O root.img | dd conv=fdatasync bs=1M of=$dev
 aws ec2 detach-volume --volume-id $volume
-snapshot=$(aws ec2 create-snapshot --volume-id $volume --description $name | jq -r .SnapshotId)
+snapshot=$(aws --output json ec2 create-snapshot --volume-id $volume --description $name | jq -r .SnapshotId)
 wait_snapshot $snapshot $my_region
 aws ec2 delete-volume --volume-id $volume
 
 # us-east-1 already has the AMI but we want gp2 rootfs
 for dest in us-east-1 us-west-1 us-west-2 eu-west-1 eu-central-1 ap-southeast-1 ap-southeast-2 ap-northeast-1 sa-east-1; do
     if test $dest = $my_region; then target=$snapshot; else
-        target=$(aws ec2 copy-snapshot --source-region $my_region --source-snapshot-id $snapshot --region $dest --description $name |
+        target=$(aws --output json ec2 copy-snapshot --source-region $my_region --source-snapshot-id $snapshot --region $dest --description $name |
             jq -r .SnapshotId)
         wait_snapshot $target $dest
     fi
-    ami=$(aws ec2 register-image \
+    ami=$(aws --output json ec2 register-image \
         --region $dest \
         --name $name \
         --description $name \
