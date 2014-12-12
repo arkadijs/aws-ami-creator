@@ -16,6 +16,7 @@ declare -A akis=(
     [ap-northeast-1]=aki-176bf516
     [ap-southeast-1]=aki-503e7402
     [ap-southeast-2]=aki-c362fff9
+    [eu-central-1]=aki-184c7a05
     [eu-west-1]=aki-52a34525
     [sa-east-1]=aki-5553f448
     [us-east-1]=aki-919dcaf8
@@ -84,8 +85,8 @@ snapshot=$(aws ec2 create-snapshot --volume-id $volume --description $name | jq 
 wait_snapshot $snapshot $my_region
 aws ec2 delete-volume --volume-id $volume
 
-# us-east-1 already has the AMI
-for dest in us-west-1 us-west-2 eu-west-1 ap-southeast-1; do # ap-southeast-2 ap-northeast-1 sa-east-1
+# us-east-1 already has the AMI but we want gp2 rootfs
+for dest in us-east-1 us-west-1 us-west-2 eu-west-1 eu-central-1 ap-southeast-1 ap-southeast-2 ap-northeast-1 sa-east-1; do
     if test $dest = $my_region; then target=$snapshot; else
         target=$(aws ec2 copy-snapshot --source-region $my_region --source-snapshot-id $snapshot --region $dest --description $name |
             jq -r .SnapshotId)
